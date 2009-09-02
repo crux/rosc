@@ -9,7 +9,9 @@ module OSC
     # types will be coerced, so e.g. 'fi' would match 'ii' and the float would
     # be coerced to an int.
     def add_method(pat, typespec, prock=nil, &block)
-      pat = Pattern.new(pat) unless Pattern === pat
+      unless Regexp == pat.class
+        pat = Pattern.new(pat) unless Pattern === pat
+      end
       if block_given? and prock
 	raise ArgumentError, 'Specify either a block or a Proc, not both.'
       end
@@ -22,6 +24,16 @@ module OSC
       end
       @cb ||= []
       @cb << [pat, typespec, prock]
+    end
+
+    def pattern_applies? pattern, txt
+      return false if pattern.nil?
+
+      if pattern.class == Regexp
+        pattern.match txt
+      else
+        Pattern.intersect? pat, txt
+      end
     end
 
     # dispatch the provided message. It can be raw or already decoded with
@@ -38,7 +50,8 @@ module OSC
       when Message
         unless @cb.nil?
           @cb.each do |pat, typespec, obj|
-            if pat.nil? or Pattern.intersect?(pat, mesg.address)
+            #if pat.nil? or Pattern.intersect?(pat, mesg.address)
+            if(pattern_applies? pat, mesg.address)
               if typespec
                 if typespec.size == mesg.args.size
                   match = true
