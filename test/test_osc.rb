@@ -120,6 +120,36 @@ class TC_OSC < Test::Unit::TestCase
     s.test_request Bundle.new(nil, Message.new("/foo/bar",'si','Hello, World!',42), Message.new("/foo/bar",'si','Hello, World!',42), Message.new("/foo/bar",'si','Hello, World!',42))
   end
 
+  # helper method to test server dispatch with regexp patterns. 
+  # (see below: #test_add_method_with_regex)
+  #
+  def assert_regex_method_dispatch re, msg_addr, match_expected = true
+    s = TestServer.new
+    val = Time.now.usec
+    matched = false
+    s.add_method(re, nil) do |msg| 
+      matched = true
+      assert_equal 'i', msg.typetag
+      assert_equal val, msg[0]
+    end
+    s.test_request Message.new(msg_addr, 'i', val)
+    assert_equal match_expected, matched
+  end
+
+  def test_add_method_with_regex
+    assert_regex_method_dispatch %r{/foo/bar}, "/foo/bar"
+    assert_regex_method_dispatch %r{/foo/.*}, "/foo/bar"
+    assert_regex_method_dispatch %r{/.*}, "/foo/bar"
+
+    assert_regex_method_dispatch %r{/a/b/c}, "/a/b/c"
+    assert_regex_method_dispatch %r{/a/.?/c}, "/a/X/c"
+    assert_regex_method_dispatch %r{/a/.*/c}, "/a/X/c"
+    assert_regex_method_dispatch %r{/a/.+/c}, "/a/X/c"
+    assert_regex_method_dispatch %r{/a/.+/X}, "/a/b/c", false
+
+    assert_regex_method_dispatch /foo/, "/foo/bar", false
+  end
+
   def test_pattern
     # test *
     assert Pattern.intersect?('/*/bar/baz','/foo/*/baz')

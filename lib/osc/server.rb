@@ -30,9 +30,9 @@ module OSC
       return false if pattern.nil?
 
       if pattern.class == Regexp
-        pattern.match txt
+        ((pattern.match txt)[0] == txt) rescue false
       else
-        Pattern.intersect? pat, txt
+        Pattern.intersect? pattern, txt
       end
     end
 
